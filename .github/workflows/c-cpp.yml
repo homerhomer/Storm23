@@ -30,4 +30,4 @@ jobs:
     # 5. Compile your sketch to test for code errors
     # NOTE: Replace 'MyProject/MyProject.ino' with your actual folder/file path
     - name: Compile Sketch
-      run: arduino-cli compile --fqbn arduino:avr:uno homerhomer/Storm23/Storm23.ino
+      run: arduino-cli compile --fqbn arduino:avr:uno Storm23/Storm23.ino
