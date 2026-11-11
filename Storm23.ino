@@ -7,7 +7,7 @@
     See <https://www.gnu.org/licenses/>. 
 */
 
-#include "RPU_Config.h"
+#include "RPU_config.h"
 #include "RPU.h"
 #include "DropTargets.h"
 #include "Storm23.h"
