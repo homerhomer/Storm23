@@ -165,6 +165,7 @@ byte SelfTestStateToCalloutMap[] = {
 #define SOUND_EFFECT_LIGHTNING_11                       38
 #define SOUND_EFFECT_LIGHTNING_12                       39
 #define SOUND_EFFECT_SAUCER_HOLD                        40
+#define SOUND_EFFECT_OUTLANE                            41
 
 #define SOUND_EFFECT_COIN_DROP_1                        100
 #define SOUND_EFFECT_COIN_DROP_2                        101
@@ -4580,17 +4581,16 @@ void HandleGamePlaySwitches(byte switchHit) {
       break;      
 
     case SW_OUTLANES_BOTTOM:
+        PlaySoundEffect(SOUND_EFFECT_OUTLANE);
       if (BallSaveEndTime) BallSaveEndTime += 3000;
 //      PlaySoundEffect(SOUND_EFFECT_OUTLANE_UNLIT);
       CurrentScores[CurrentPlayer] += PlayfieldMultiplier * 5000;
       LastSwitchHitTime = CurrentTime;
       if (BallFirstSwitchHitTime == 0) BallFirstSwitchHitTime = CurrentTime;
-      break;
+      break;    
   }
 
-
 }
-
 
 int RunGamePlayMode(int curState, boolean curStateChanged) {
   int returnState = curState;
