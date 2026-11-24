@@ -4581,7 +4581,8 @@ void HandleGamePlaySwitches(byte switchHit) {
       break;      
 
     case SW_OUTLANES_BOTTOM:
-        PlaySoundEffect(SOUND_EFFECT_OUTLANE);
+// PlaySoundEffect(SOUND_EFFECT_OUTLANE);
+        QueueNotification(SOUND_EFFECT_OUTLANE, 10);
       if (BallSaveEndTime) BallSaveEndTime += 3000;
 //      PlaySoundEffect(SOUND_EFFECT_OUTLANE_UNLIT);
       CurrentScores[CurrentPlayer] += PlayfieldMultiplier * 5000;
