@@ -165,7 +165,6 @@ byte SelfTestStateToCalloutMap[] = {
 #define SOUND_EFFECT_LIGHTNING_11                       38
 #define SOUND_EFFECT_LIGHTNING_12                       39
 #define SOUND_EFFECT_SAUCER_HOLD                        40
-#define SOUND_EFFECT_OUTLANE                            41
 
 #define SOUND_EFFECT_COIN_DROP_1                        100
 #define SOUND_EFFECT_COIN_DROP_2                        101
@@ -225,7 +224,7 @@ byte SelfTestStateToCalloutMap[] = {
 #define SOUND_EFFECT_VP_END_DROP_TARGET_FRENZY                    340
 #define SOUND_EFFECT_VP_END_SPINNER_FRENZY                        341
 #define SOUND_EFFECT_VP_JAILBREAK_MULTIBALL                       342
-
+#define SOUND_EFFECT_VP_OUTLANE                                   343
 
 #define SOUND_EFFECT_RALLY_SONG_1                 500
 #define SOUND_EFFECT_RALLY_SONG_2                 501
@@ -4581,8 +4580,7 @@ void HandleGamePlaySwitches(byte switchHit) {
       break;      
 
     case SW_OUTLANES_BOTTOM:
-// PlaySoundEffect(SOUND_EFFECT_OUTLANE);
-        QueueNotification(SOUND_EFFECT_OUTLANE, 10);
+        QueueNotification(SOUND_EFFECT_VP_OUTLANE, 10);
       if (BallSaveEndTime) BallSaveEndTime += 3000;
 //      PlaySoundEffect(SOUND_EFFECT_OUTLANE_UNLIT);
       CurrentScores[CurrentPlayer] += PlayfieldMultiplier * 5000;
