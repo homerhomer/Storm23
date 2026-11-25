@@ -3565,8 +3565,10 @@ void CheckHighScores() {
   unsigned long highestScore = 0;
   int highScorePlayerNum = 0;
   for (int count = 0; count < CurrentNumPlayers; count++) {
-    if (CurrentScores[count] > highestScore) highestScore = CurrentScores[count];
-    highScorePlayerNum = count;
+    if (CurrentScores[count] > highestScore) {
+      highestScore = CurrentScores[count];
+      highScorePlayerNum = count;
+    }
   }
 
   if (highestScore > HighScore) {
@@ -3742,7 +3744,7 @@ void HandleSaucerDownSwitch(byte switchIndex) {
       // Figure out if there are one or two balls in saucers
       byte numBallsInSaucers = 1;
       if (switchIndex==0 && UpperLockSwitchState[1]) numBallsInSaucers += 1;
-      if (switchIndex==1 && UpperLockSwitchState[2]) numBallsInSaucers += 1;
+      if (switchIndex==1 && UpperLockSwitchState[0]) numBallsInSaucers += 1;
 
       if (numBallsInSaucers==2) {
         if (NumberOfBallsInPlay==2) {
