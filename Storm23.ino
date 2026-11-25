@@ -2604,6 +2604,7 @@ int InitGamePlay(boolean curStateChanged) {
     // Reset displays & game state variables
     for (int count = 0; count < 4; count++) {
       // Initialize game-specific variables
+      Bonus[count] = 0;
       BonusX[count] = 1;
       PlayerLockStatus[count] = 0;
       CombosAchieved[count] = 0;
@@ -2618,9 +2619,9 @@ int InitGamePlay(boolean curStateChanged) {
       LoopMulitballGoal[count] = 3;
       SpinnerMaxGoal[count] = SpinsUntilMultiball;
       HoldoverAwards[count] = 0;  
-      BonusXIncreaseAvailable[CurrentPlayer] = 0;
-      StormMultiballReady[CurrentPlayer] = false;
-      FeaturesCompleted[CurrentPlayer] = 0;
+      BonusXIncreaseAvailable[count] = 0;
+      StormMultiballReady[count] = false;
+      FeaturesCompleted[count] = 0;
     }
     ShowPlayerScores(0xFF, false, false);
     
