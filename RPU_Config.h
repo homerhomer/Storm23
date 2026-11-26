@@ -57,7 +57,7 @@
 //#define RPU_OS_USE_DASH51
 //#define RPU_OS_USE_DASH32
 //#define RPU_OS_USE_SB100
-#define RPU_OS_USE_SB300
+//#define RPU_OS_USE_SB300
 //#define RPU_OS_USE_WAV_TRIGGER
 #define RPU_OS_USE_WAV_TRIGGER_1p3
 //#define RPU_OS_USE_AUX_LAMPS
