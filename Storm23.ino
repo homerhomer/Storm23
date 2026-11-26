@@ -2495,7 +2495,7 @@ int RunAttractMode(int curState, boolean curStateChanged) {
     AttractLastLadderTime = CurrentTime;
   }
 
-  byte animStep = ((CurrentTime/25)%LAMP_ANIMATION_STEPS);
+  byte animStep = ((CurrentTime/30)%LAMP_ANIMATION_STEPS);
   if (animStep!=CurrentAttractAnimationStep) {
     CurrentAttractAnimationStep = animStep;
     ShowLampAnimationSingleStep(attractPlayfieldPhase, animStep);
