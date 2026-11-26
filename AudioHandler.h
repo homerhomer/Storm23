@@ -1,5 +1,7 @@
 #ifndef AUDIO_HANDLER_H
+#define AUDIO_HANDLER_H
 
+#include <Arduino.h>
 #include <HardwareSerial.h>
 #include "RPU_Config.h"
 #include "RPU.h"
@@ -248,6 +250,4 @@ class AudioHandler
 };
 
 
-
-#define AUDIO_HANDLER_H
 #endif
