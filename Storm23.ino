@@ -587,7 +587,7 @@ void ReadStoredParameters() {
 
 void MoveBallFromOutholeToRamp(boolean sawSwitch = false) {
   if (RPU_ReadSingleSwitchState(SW_OUTHOLE) || sawSwitch) {
-    if (CurrentTime==0 || CurrentTime>(BallRampKicked+1500)) {
+    if (CurrentTime==0 || CurrentTime>(BallRampKicked+1100)) {
       RPU_PushToSolenoidStack(SOL_OUTHOLE, OUTHOLE_KICKER_SOLENOID_TIME, true); 
       if (CurrentTime) BallRampKicked = CurrentTime;
       else BallRampKicked = millis();
@@ -1698,7 +1698,14 @@ void UpdateLockStatus() {
     }
   }
 
-  if (UpperLockLastChecked==0 || CurrentTime>(UpperLockLastChecked+500) || MachineLockDiscrepancyTime) {
+  // --- START OF STEP 1 FIX ---
+  boolean anyMultiballActive = LoopMultiballRunning || SpinnerMultiballRunning ||
+  StormMultiballRunning || JailBreakMultiballRunning ||
+  (GameMode == GAME_MODE_STORM_ADD_A_BALL);
+
+  if (anyMultiballActive) {
+    MachineLockDiscrepancyTime = 0;
+  } else if (UpperLockLastChecked==0 || CurrentTime>(UpperLockLastChecked+500) || MachineLockDiscrepancyTime) {
     UpperLockLastChecked = CurrentTime;
     byte curUpperLock = 0;
     if (UpperLockSwitchState[0] && !Saucer1ScheduledEject) curUpperLock |= LOCK_1_ENGAGED;
@@ -1714,12 +1721,11 @@ void UpdateLockStatus() {
           sprintf(buf, "** MachineLocks out of sync (0x%02X versus 0x%02X)\n", MachineLocks, curUpperLock);
           Serial.write(buf);
         }
-        
+
         // If "MachineLocks" has been out of sync
         // for 1000ms, we should re-sync it
         // to the switches
         for (byte count=0; count<2; count++) UpperLockSwitchState[count] = false;
-//        MachineLocks &= ~LOCKS_ENGAGED_MASK;
         MachineLocks = InitializeMachineLocksBasedOnSwitches();
         NumberOfBallsLocked = CountBits(MachineLocks & LOCKS_ENGAGED_MASK);
         NumberOfBallsInPlay = TotalBallsLoaded - (NumberOfBallsLocked + CountBallsInTrough());
@@ -1732,12 +1738,13 @@ void UpdateLockStatus() {
           sprintf(buf, "Now ML=%d, BL=%d, BIP=%d, T=%d, PL=%d\n", MachineLocks, NumberOfBallsLocked, NumberOfBallsInPlay, CountBallsInTrough(), PlayerLockStatus[CurrentPlayer]);
           Serial.write(buf);
         }
-      
+
       }
     } else {
       MachineLockDiscrepancyTime = 0;
     }
   }
+  // --- END OF STEP 1 FIX ---
 }
 
 
@@ -2812,7 +2819,7 @@ int InitNewBall(bool curStateChanged) {
     DropTargets2.ResetDropTargets(CurrentTime + 250, true);
     DropTargets3.ResetDropTargets(CurrentTime + 400, true);
 
-    RPU_PushToTimedSolenoidStack(SOL_BALL_SERVE, BALL_SERVE_SOLENOID_TIME, CurrentTime + 1000);
+    RPU_PushToTimedSolenoidStack(SOL_BALL_SERVE, BALL_SERVE_SOLENOID_TIME, CurrentTime + 600);
     NumberOfBallsInPlay = 1;
 
     LoopMultiballRunning = false;
@@ -3473,7 +3480,7 @@ int ManageGameMode() {
       
       // Make sure the ball stays on the sensor for at least
       // 1 second to be sure that it's not bouncing or passing through
-      if (CurrentTime > (BallTimeInTrough+1500)) {
+      if (CurrentTime > (BallTimeInTrough+1100)) {
 
         if (BallFirstSwitchHitTime == 0 && NumTiltWarnings <= MaxTiltWarnings) {
           // Nothing hit yet, so return the ball to the player
@@ -4230,45 +4237,47 @@ void HandleLoopSpinnerAlternation(byte switchHit) {
 
 void UpdateLocksBasedOnStandups(unsigned int startingHits) {
 
-  boolean multiballRunning = LoopMultiballRunning || SpinnerMultiballRunning || StormMultiballRunning || JailBreakMultiballRunning; 
+  boolean multiballRunning = LoopMultiballRunning || SpinnerMultiballRunning || StormMultiballRunning || JailBreakMultiballRunning;
 
   // Check to see if either lock is ready or engaged now
   if ( (startingHits&STANDUPS_FOR_LOCK_1)!=STANDUPS_FOR_LOCK_1 && (StandupHits[CurrentPlayer]&STANDUPS_FOR_LOCK_1)==STANDUPS_FOR_LOCK_1 ) {
     // Lock one is now ready/engaged
     if ( !(PlayerLockStatus[CurrentPlayer]&LOCK_1_ENGAGED) && !(PlayerLockStatus[CurrentPlayer]&LOCK_1_AVAILABLE) ) {
-      // This should always be the case -- but who knows?
-      if (MachineLocks&LOCK_1_ENGAGED) {
-        // Ball is already there, so announce lock
-        if (!multiballRunning) QueueNotification(SOUND_EFFECT_VP_BALL_1_LOCKED, 10);
+      // --- START OF STEP 2 FIX (LOCK 1) ---
+      if ((MachineLocks&LOCK_1_ENGAGED) && !multiballRunning) {
+        // Ball is already there during single-ball play, so announce lock
+        QueueNotification(SOUND_EFFECT_VP_BALL_1_LOCKED, 10);
         LockBall(0);
       } else {
-        // annouce lock ready
+        // Announce lock ready (or silently qualify if multiball is active)
         if (!multiballRunning) QueueNotification(SOUND_EFFECT_VP_LOCK_1_READY, 10);
         PlayerLockStatus[CurrentPlayer] |= LOCK_1_AVAILABLE;
       }
+      // --- END OF STEP 2 FIX (LOCK 1) ---
     }
 
     for (byte count=2; count<7; count++) {
       StandupFlashEndTime[count] = CurrentTime + 5000;
     }
-    
+
   }
 
   if ( (startingHits&STANDUPS_FOR_LOCK_2)!=STANDUPS_FOR_LOCK_2 && (StandupHits[CurrentPlayer]&STANDUPS_FOR_LOCK_2)==STANDUPS_FOR_LOCK_2 ) {
     // Lock two is now ready/engaged
     if ( !(PlayerLockStatus[CurrentPlayer]&LOCK_2_ENGAGED) && !(PlayerLockStatus[CurrentPlayer]&LOCK_2_AVAILABLE) ) {
-      // This should always be the case -- but who knows?
-      if (MachineLocks&LOCK_2_ENGAGED) {
-        // Ball is already there, so announce lock
-        if (!multiballRunning) QueueNotification(SOUND_EFFECT_VP_BALL_2_LOCKED, 10);
+      // --- START OF STEP 2 FIX (LOCK 2) ---
+      if ((MachineLocks&LOCK_2_ENGAGED) && !multiballRunning) {
+        // Ball is already there during single-ball play, so announce lock
+        QueueNotification(SOUND_EFFECT_VP_BALL_2_LOCKED, 10);
         LockBall(1);
       } else {
-        // annouce lock ready
+        // Announce lock ready (or silently qualify if multiball is active)
         if (!multiballRunning) QueueNotification(SOUND_EFFECT_VP_LOCK_2_READY, 10);
         PlayerLockStatus[CurrentPlayer] |= LOCK_2_AVAILABLE;
       }
-      TotalSpins[CurrentPlayer] = 0;        
-    }    
+      // --- END OF STEP 2 FIX (LOCK 2) ---
+      TotalSpins[CurrentPlayer] = 0;
+    }
     for (byte count=0; count<2; count++) {
       StandupFlashEndTime[count] = CurrentTime + 5000;
     }
@@ -4276,8 +4285,9 @@ void UpdateLocksBasedOnStandups(unsigned int startingHits) {
       StandupFlashEndTime[count] = CurrentTime + 5000;
     }
   }
-  
+
 }
+
 
 
 void SpotStandupTarget(byte targetBank) {
