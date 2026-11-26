@@ -2999,9 +2999,9 @@ void UpdateDropTargets() {
       if (DropTargets3.GetStatus(false)) DropTargets3.ResetDropTargets(CurrentTime + 250, true);
       if (DropTargets2.GetStatus(false)) DropTargets2.ResetDropTargets(CurrentTime + 500, true);
       if (DropTargets1.GetStatus(false)) DropTargets1.ResetDropTargets(CurrentTime + 750, true);
-      DropTargetResetTime = 0;
-      DropTargetResetTime = 0;
-      DropTargetResetTime = 0;
+      DropTargetResetTime[0] = 0;
+      DropTargetResetTime[1] = 0;
+      DropTargetResetTime[2] = 0;
     }
   }
 
