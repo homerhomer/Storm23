@@ -3505,11 +3505,16 @@ int ManageGameMode() {
           } else {
 
             NumberOfBallsInPlay -= 1;
-            if (NumberOfBallsInPlay==0) {
-              ShowPlayerScores(0xFF, false, false);
-              Audio.StopAllAudio();
-              returnState = MACHINE_STATE_COUNTDOWN_BONUS;
-            }
+if (NumberOfBallsInPlay==0) {
+  if (ScoreAdditionAnimationStartTime != 0) {
+    CurrentScores[CurrentPlayer] += ScoreAdditionAnimation;
+    ScoreAdditionAnimation = 0;
+    ScoreAdditionAnimationStartTime = 0;
+    }
+    ShowPlayerScores(0xFF, false, false);
+    Audio.StopAllAudio();
+    returnState = MACHINE_STATE_COUNTDOWN_BONUS;
+    }
           }
         }
       }
