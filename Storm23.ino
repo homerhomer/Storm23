@@ -234,6 +234,7 @@ byte SelfTestStateToCalloutMap[] = {
 #define SOUND_EFFECT_BACKGROUND_SONG_3            527
 #define SOUND_EFFECT_BACKGROUND_AFTER_MULTI       530
 #define SOUND_EFFECT_BACKGROUND_STORM_READY       550
+#define SOUND_EFFECT_BACKGROUND_SPINNER_FRENZY    560
 #define SOUND_EFFECT_BACKGROUND_MULTIBALL         575
 
 
@@ -3017,11 +3018,19 @@ int ManageGameMode() {
   UpdateDropTargets();
 
   // Update timed variables  
-  if (SpinnerLitEndTime && CurrentTime>SpinnerLitEndTime) SpinnerLitEndTime = 0;
   if (SpinnerFrenzyEndTime && CurrentTime>SpinnerFrenzyEndTime && NumberOfBallsInPlay==1) {
-    // Need to reset music here
     SpinnerFrenzyEndTime = 0;
     QueueNotification(SOUND_EFFECT_VP_END_SPINNER_FRENZY, 5);
+    if (!LoopMultiballRunning && !SpinnerMultiballRunning && !StormMultiballRunning && !JailBreakMultiballRunning) {
+      if (BallsPerGame==3) {
+        PlayBackgroundSong(SOUND_EFFECT_BACKGROUND_SONG_1 + (CurrentBallInPlay-1));
+      } else {
+        byte trackNum = CurrentBallInPlay - 0;
+        if (CurrentBallInPlay>1 && CurrentBallInPlay<5) trackNum = 1;
+        if (CurrentBallInPlay==5) trackNum = 2;
+        PlayBackgroundSong(SOUND_EFFECT_BACKGROUND_SONG_1 + trackNum);
+      }
+    }
   }
 
   // Figure out if we need to show a timer in the display
@@ -4195,6 +4204,7 @@ void HandleLoopSpinnerAlternation(byte switchHit) {
     FeaturesCompleted[CurrentPlayer] |= FEATURE_SPINNER_FRENZY;
     LoopSpinnerAlternation = 0;
     QueueNotification(SOUND_EFFECT_VP_SPINNER_FRENZY, 10);
+    PlayBackgroundSong(SOUND_EFFECT_BACKGROUND_SPINNER_FRENZY);
     
     if (DropTargetFrenzyEndTime) {
       SpinnerFrenzyEndTime = DropTargetFrenzyEndTime + SPINNER_FRENZY_TIME;
