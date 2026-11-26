@@ -4,7 +4,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    See <https://www.gnu.org/licenses/>. 
+    See <https://www.gnu.org/licenses/>.
 */
 
 #include "RPU_Config.h"
@@ -235,6 +235,7 @@ byte SelfTestStateToCalloutMap[] = {
 #define SOUND_EFFECT_BACKGROUND_AFTER_MULTI       530
 #define SOUND_EFFECT_BACKGROUND_STORM_READY       550
 #define SOUND_EFFECT_BACKGROUND_SPINNER_FRENZY    560
+#define SOUND_EFFECT_BACKGROUND_DROP_FRENZY       565
 #define SOUND_EFFECT_BACKGROUND_MULTIBALL         575
 
 
@@ -2180,6 +2181,28 @@ void PlayBackgroundSong(unsigned int songNum) {
   Audio.PlayBackgroundSong(songNum + ((unsigned int)SoundTrackNum-1)*100);
 }
 
+void RestoreBackgroundSong() {
+  if (LoopMultiballRunning || SpinnerMultiballRunning || StormMultiballRunning || JailBreakMultiballRunning) {
+    return;
+  } else if (SpinnerFrenzyEndTime) {
+    PlayBackgroundSong(SOUND_EFFECT_BACKGROUND_SPINNER_FRENZY);
+  } else if (DropTargetFrenzyEndTime) {
+    PlayBackgroundSong(SOUND_EFFECT_BACKGROUND_DROP_FRENZY);
+  } else if (StormMultiballReady[CurrentPlayer]) {
+    PlayBackgroundSong(SOUND_EFFECT_BACKGROUND_STORM_READY);
+  } else {
+    if (BallsPerGame == 3) {
+      PlayBackgroundSong(SOUND_EFFECT_BACKGROUND_SONG_1 + (CurrentBallInPlay - 1));
+    } else {
+      byte trackNum = CurrentBallInPlay - 1;
+      if (CurrentBallInPlay > 1 && CurrentBallInPlay < 5) trackNum = 1;
+      if (CurrentBallInPlay == 5) trackNum = 2;
+      PlayBackgroundSong(SOUND_EFFECT_BACKGROUND_SONG_1 + trackNum);
+    }
+  }
+}
+
+
 
 unsigned long NextSoundEffectTime = 0;
 
@@ -2961,20 +2984,27 @@ void UpdateDropTargets() {
   DropTargets3.Update(CurrentTime);
 
   if (DropTargetMode[CurrentPlayer]==DROP_TARGETS_FRENZY) {
-    if (DropTargetFrenzyEndTime && CurrentTime > DropTargetFrenzyEndTime && NumberOfBallsInPlay==1) {
+    if (DropTargetFrenzyEndTime && NumberOfBallsInPlay > 1) {
+      DropTargetFrenzyEndTime += (CurrentTime - LastTimeThroughLoop);
+    }
+
+    if (DropTargetFrenzyEndTime && CurrentTime > DropTargetFrenzyEndTime && NumberOfBallsInPlay <= 1) {
       QueueNotification(SOUND_EFFECT_VP_END_DROP_TARGET_FRENZY, 5);
       DropTargetFrenzyEndTime = 0;
       DropTargetMode[CurrentPlayer] += 1;
       DropTargetStage[CurrentPlayer] = 0;
+
+      RestoreBackgroundSong();
+
       if (DropTargets3.GetStatus(false)) DropTargets3.ResetDropTargets(CurrentTime + 250, true);
       if (DropTargets2.GetStatus(false)) DropTargets2.ResetDropTargets(CurrentTime + 500, true);
       if (DropTargets1.GetStatus(false)) DropTargets1.ResetDropTargets(CurrentTime + 750, true);
-      DropTargetResetTime[0] = 0;
-      DropTargetResetTime[1] = 0;
-      DropTargetResetTime[2] = 0;
-    } else {
+      DropTargetResetTime = 0;
+      DropTargetResetTime = 0;
+      DropTargetResetTime = 0;
     }
   }
+
 
 
   // Hurry up for drops
@@ -2992,12 +3022,13 @@ void UpdateDropTargets() {
           if (timeUntilNext<50) timeUntilNext = 50;
           DropTargetHurryTime[count] = CurrentTime + timeUntilNext;
           DropTargetHurryLamp[count] ^= 1;
-//          if (DropTargetHurryLamp[count]) PlaySoundEffect(SOUND_EFFECT_DROP_TARGET_HURRY);
+          //          if (DropTargetHurryLamp[count]) PlaySoundEffect(SOUND_EFFECT_DROP_TARGET_HURRY);
         }
       }
-    }    
+    }
   }
 }
+
 
 byte GameModeStage;
 boolean DisplaysNeedRefreshing = false;
@@ -3017,33 +3048,31 @@ int ManageGameMode() {
 
   UpdateDropTargets();
 
-  // Update timed variables  
-  if (SpinnerFrenzyEndTime && CurrentTime>SpinnerFrenzyEndTime && NumberOfBallsInPlay==1) {
+  // Freeze active frenzy and playfield multiplier timers during multiball
+  if (NumberOfBallsInPlay > 1) {
+    unsigned long loopDelta = CurrentTime - LastTimeThroughLoop;
+    if (SpinnerFrenzyEndTime) SpinnerFrenzyEndTime += loopDelta;
+    if (PlayfieldMultiplierExpiration) PlayfieldMultiplierExpiration += loopDelta;
+  }
+
+  // Update timed variables
+  if (SpinnerFrenzyEndTime && CurrentTime > SpinnerFrenzyEndTime && NumberOfBallsInPlay <= 1) {
     SpinnerFrenzyEndTime = 0;
     QueueNotification(SOUND_EFFECT_VP_END_SPINNER_FRENZY, 5);
-    if (!LoopMultiballRunning && !SpinnerMultiballRunning && !StormMultiballRunning && !JailBreakMultiballRunning) {
-      if (BallsPerGame==3) {
-        PlayBackgroundSong(SOUND_EFFECT_BACKGROUND_SONG_1 + (CurrentBallInPlay-1));
-      } else {
-        byte trackNum = CurrentBallInPlay - 0;
-        if (CurrentBallInPlay>1 && CurrentBallInPlay<5) trackNum = 1;
-        if (CurrentBallInPlay==5) trackNum = 2;
-        PlayBackgroundSong(SOUND_EFFECT_BACKGROUND_SONG_1 + trackNum);
-      }
-    }
+    RestoreBackgroundSong();
   }
 
   // Figure out if we need to show a timer in the display
   if (PlayfieldMultiplierExpiration || SpinnerFrenzyEndTime || DropTargetFrenzyEndTime || BallSaveEndTime) {
     unsigned long millisecondsLeft = 0;
-    if (BallSaveEndTime) {
+    if (BallSaveEndTime && BallSaveEndTime > CurrentTime) {
       millisecondsLeft = BallSaveEndTime - CurrentTime;
-    } else if (SpinnerFrenzyEndTime) {
-      if (NumberOfBallsInPlay==1) millisecondsLeft = SpinnerFrenzyEndTime - CurrentTime;
-    } else if (DropTargetFrenzyEndTime) {
-      if (NumberOfBallsInPlay==1) millisecondsLeft = DropTargetFrenzyEndTime - CurrentTime;
-    } else {
-      if (NumberOfBallsInPlay==1) millisecondsLeft = PlayfieldMultiplierExpiration - CurrentTime;
+    } else if (SpinnerFrenzyEndTime && SpinnerFrenzyEndTime > CurrentTime) {
+      if (NumberOfBallsInPlay == 1) millisecondsLeft = SpinnerFrenzyEndTime - CurrentTime;
+    } else if (DropTargetFrenzyEndTime && DropTargetFrenzyEndTime > CurrentTime) {
+      if (NumberOfBallsInPlay == 1) millisecondsLeft = DropTargetFrenzyEndTime - CurrentTime;
+    } else if (PlayfieldMultiplierExpiration && PlayfieldMultiplierExpiration > CurrentTime) {
+      if (NumberOfBallsInPlay == 1) millisecondsLeft = PlayfieldMultiplierExpiration - CurrentTime;
     }
 
     if (millisecondsLeft > 99000) millisecondsLeft = 99000;
@@ -3084,7 +3113,13 @@ int ManageGameMode() {
       StormMultiballRunning = false;
       JailBreakMultiballRunning = false;
       if (DEBUG_MESSAGES) Serial.write("Dropped multiballs because BIP=1\n");
-      PlayBackgroundSong(SOUND_EFFECT_BACKGROUND_AFTER_MULTI);
+      if (SpinnerFrenzyEndTime) {
+        PlayBackgroundSong(SOUND_EFFECT_BACKGROUND_SPINNER_FRENZY);
+      } else if (DropTargetFrenzyEndTime) {
+        PlayBackgroundSong(SOUND_EFFECT_BACKGROUND_DROP_FRENZY);
+      } else {
+        PlayBackgroundSong(SOUND_EFFECT_BACKGROUND_AFTER_MULTI);
+      }
     }
   } else {
     if (MultiballBallSave==0) BallSaveEndTime = 0;
@@ -3972,6 +4007,9 @@ boolean HandleDropTarget(byte bankNum, byte switchHit) {
           DropTargetResetTime[2] = 0;
           PlaySoundEffect(SOUND_EFFECT_DROP_TARGET_MODE_COMPLETE);
           QueueNotification(SOUND_EFFECT_VP_DROP_TARGET_FRENZY, 8);
+          if (!LoopMultiballRunning && !SpinnerMultiballRunning && !StormMultiballRunning && !JailBreakMultiballRunning) {
+            PlayBackgroundSong(SOUND_EFFECT_BACKGROUND_DROP_FRENZY);
+          }
         }
       } else {
         curBank->ResetDropTargets(CurrentTime + 500, true);
@@ -4064,41 +4102,6 @@ boolean HandleDropTarget(byte bankNum, byte switchHit) {
       }
     }
 
-    boolean cleared = curBank->CheckIfBankCleared();
-    if (cleared) {
-      if (bankNum==DropTargetStage[CurrentPlayer]) {
-        if (bankNum<2) {
-          DropTargetStage[CurrentPlayer] += 1;
-          curBank->ResetDropTargets(CurrentTime + 500, true);
-          DropTargetResetTime[bankNum] = 0;
-          PlaySoundEffect(SOUND_EFFECT_DROP_TARGET_STAGE_COMPLETE);
-        } else {
-          DropTargetStage[CurrentPlayer] = 0;
-          DropTargetMode[CurrentPlayer] = DROP_TARGETS_FRENZY;
-          IncreasePlayfieldMultiplier(DROP_TARGET_FRENZY_TIME);
-          unsigned long timerMultiplier = 1;
-          if (HoldoverAwards[CurrentPlayer]&HOLDOVER_TIMER_MULTIPLIER) timerMultiplier = 2;
-          if (SpinnerFrenzyEndTime) {
-            DropTargetFrenzyEndTime = SpinnerFrenzyEndTime + DROP_TARGET_FRENZY_TIME * timerMultiplier;
-          } else {
-            DropTargetFrenzyEndTime = CurrentTime + DROP_TARGET_FRENZY_TIME * timerMultiplier;
-          }
-          DropTargets3.ResetDropTargets(CurrentTime + 250, true);
-          if (DropTargets2.GetStatus(false)) DropTargets2.ResetDropTargets(CurrentTime + 500, true);
-          if (DropTargets1.GetStatus(false)) DropTargets1.ResetDropTargets(CurrentTime + 750, true);
-          DropTargetResetTime[0] = 0;
-          DropTargetResetTime[1] = 0;
-          DropTargetResetTime[2] = 0;
-          PlaySoundEffect(SOUND_EFFECT_DROP_TARGET_MODE_COMPLETE);
-        }
-      } else {
-        curBank->ResetDropTargets(CurrentTime + 500, true);
-        DropTargetResetTime[bankNum] = 0;
-        PlaySoundEffect(SOUND_EFFECT_DROP_TARGET_RESET);
-      }
-    } else {
-      PlaySoundEffect(SOUND_EFFECT_DROP_TARGET_HIT);
-    }  
   }
   
   return true;
@@ -4204,7 +4207,9 @@ void HandleLoopSpinnerAlternation(byte switchHit) {
     FeaturesCompleted[CurrentPlayer] |= FEATURE_SPINNER_FRENZY;
     LoopSpinnerAlternation = 0;
     QueueNotification(SOUND_EFFECT_VP_SPINNER_FRENZY, 10);
-    PlayBackgroundSong(SOUND_EFFECT_BACKGROUND_SPINNER_FRENZY);
+    if (!LoopMultiballRunning && !SpinnerMultiballRunning && !StormMultiballRunning && !JailBreakMultiballRunning) {
+      PlayBackgroundSong(SOUND_EFFECT_BACKGROUND_SPINNER_FRENZY);
+    }
     
     if (DropTargetFrenzyEndTime) {
       SpinnerFrenzyEndTime = DropTargetFrenzyEndTime + SPINNER_FRENZY_TIME;
